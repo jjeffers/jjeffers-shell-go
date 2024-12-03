@@ -26,9 +26,12 @@ func handleInput(reader *bufio.Reader) {
 	case "exit":
 		exit_status, err := strconv.Atoi(cmd_args[1])
 		if err != nil {
-			fmt.Errorf("Can't convert '%s' to valid exit status.", cmd_args[1])
+			panic(fmt.Errorf("Can't convert '%s' to valid exit status.", cmd_args[1]))
 		}
 		os.Exit(exit_status)
+	case "echo":
+		echo_args := strings.Join(cmd_args[1:], " ")
+		fmt.Printf("%s\n", echo_args)
 	default:
 		fmt.Printf("%s: command not found\n", cmd)
 	}

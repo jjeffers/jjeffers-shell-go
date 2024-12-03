@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -25,12 +26,30 @@ func echoCmd(command_map map[string]shell_func, args []string) {
 	fmt.Printf("%s\n", echo_args)
 }
 
+func IsExecAny(mode os.FileMode) bool {
+	return mode&0111 != 0
+}
+
 func typeCmd(command_map map[string]shell_func, args []string) {
 	cmd := args[0]
 
 	if _, exists := command_map[cmd]; exists {
 		fmt.Printf("%s is a shell builtin\n", cmd)
 	} else {
+		path := os.Getenv("PATH")
+
+		for _, dir := range strings.Split(path, ":") {
+			files, _ := os.ReadDir(dir)
+			for _, file := range files {
+
+				info, _ := file.Info()
+
+				if file.Name() == cmd && !info.IsDir() && IsExecAny(info.Mode()) {
+					fmt.Printf("%s is %s\n", cmd, filepath.Join(dir, cmd))
+					return
+				}
+			}
+		}
 		fmt.Printf("%s: not found\n", cmd)
 	}
 }

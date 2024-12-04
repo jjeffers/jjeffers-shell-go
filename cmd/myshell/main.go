@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -36,21 +36,33 @@ func typeCmd(command_map map[string]shell_func, args []string) {
 	if _, exists := command_map[cmd]; exists {
 		fmt.Printf("%s is a shell builtin\n", cmd)
 	} else {
-		path := os.Getenv("PATH")
 
-		for _, dir := range strings.Split(path, ":") {
-			files, _ := os.ReadDir(dir)
-			for _, file := range files {
+		filepath, err := exec.LookPath(cmd)
 
-				info, _ := file.Info()
-
-				if file.Name() == cmd && !info.IsDir() && IsExecAny(info.Mode()) {
-					fmt.Printf("%s is %s\n", cmd, filepath.Join(dir, cmd))
-					return
-				}
-			}
+		if err != nil {
+			fmt.Printf("%s: not found\n", cmd)
+		} else {
+			fmt.Printf("%s is %s\n", cmd, filepath)
 		}
-		fmt.Printf("%s: not found\n", cmd)
+	}
+}
+
+func execCommand(cmd string, cmd_args []string) {
+
+	filepath, err := exec.LookPath(cmd)
+
+	if err != nil {
+		fmt.Printf("%s: command not found\n", cmd)
+	} else {
+		proc := exec.Command(filepath, cmd_args...)
+
+		stdout, err := proc.Output()
+
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Print(string(stdout))
 	}
 }
 
@@ -75,11 +87,9 @@ func handleInput(reader *bufio.Reader) {
 	cmd := strings.ToLower(cmd_args[0])
 
 	if matched_cmd, exists := commands[cmd]; exists {
-
 		matched_cmd(commands, cmd_args[1:])
-
 	} else {
-		fmt.Printf("%s: command not found\n", cmd)
+		execCommand(cmd, cmd_args[1:])
 	}
 }
 

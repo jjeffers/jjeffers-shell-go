@@ -66,12 +66,21 @@ func execCommand(cmd string, cmd_args []string) {
 	}
 }
 
+func pwdCmd(command_map map[string]shell_func, cmd_args []string) {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(dir)
+}
+
 func handleInput(reader *bufio.Reader) {
 
 	commands := map[string]shell_func{
 		"exit": exitCmd,
 		"echo": echoCmd,
 		"type": typeCmd,
+		"pwd":  pwdCmd,
 	}
 
 	input, err := reader.ReadString('\n')

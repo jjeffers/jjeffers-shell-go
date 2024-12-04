@@ -75,7 +75,14 @@ func pwdCmd(_ map[string]shell_func, cmd_args []string) {
 }
 
 func cdCmd(_ map[string]shell_func, cmd_args []string) {
-	err := os.Chdir(cmd_args[0])
+
+	target_dir := cmd_args[0]
+
+	if target_dir[0] == '~' {
+		target_dir = os.Getenv("HOME")
+	}
+
+	err := os.Chdir(target_dir)
 	if err != nil {
 		fmt.Printf("cd: %s: No such file or directory\n", cmd_args[0])
 	}

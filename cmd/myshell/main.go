@@ -66,12 +66,19 @@ func execCommand(cmd string, cmd_args []string) {
 	}
 }
 
-func pwdCmd(command_map map[string]shell_func, cmd_args []string) {
+func pwdCmd(_ map[string]shell_func, cmd_args []string) {
 	dir, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(dir)
+}
+
+func cdCmd(_ map[string]shell_func, cmd_args []string) {
+	err := os.Chdir(cmd_args[0])
+	if err != nil {
+		fmt.Printf("cd: %s: No such file or directory\n", cmd_args[0])
+	}
 }
 
 func handleInput(reader *bufio.Reader) {
@@ -81,6 +88,7 @@ func handleInput(reader *bufio.Reader) {
 		"echo": echoCmd,
 		"type": typeCmd,
 		"pwd":  pwdCmd,
+		"cd": cdCmd,
 	}
 
 	input, err := reader.ReadString('\n')

@@ -5,13 +5,33 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-type shell_func func(cmd_map map[string]shell_func, args []string)
+func tokenizeArgumentString(arguments string) ([]string, error) {
 
-func exitCmd(command_map map[string]shell_func, args []string) {
+	regex := `'(.*?)'|"(.*?)"|(\w+)`
+	reg := regexp.MustCompile(regex)
+	matches := reg.FindAllString(arguments, -1)
+
+	var result []string
+
+	for _, match := range matches {
+		trimmed_match := strings.Trim(match, `'"`)
+		result = append(result, trimmed_match)
+	}
+
+	return result, nil
+
+}
+
+type shell_func func(cmd_map map[string]shell_func, rest_of_input string)
+
+func exitCmd(command_map map[string]shell_func, rest_of_input string) {
+
+	args, _ := tokenizeArgumentString(rest_of_input)
 
 	exit_status, err := strconv.Atoi(args[0])
 	if err != nil {
@@ -21,16 +41,17 @@ func exitCmd(command_map map[string]shell_func, args []string) {
 	os.Exit(exit_status)
 }
 
-func echoCmd(command_map map[string]shell_func, args []string) {
-	echo_args := strings.Join(args, " ")
-	fmt.Printf("%s\n", echo_args)
+func echoCmd(command_map map[string]shell_func, rest_of_input string) {
+	args, _ := tokenizeArgumentString(rest_of_input)
+	fmt.Printf("%s\n", strings.Join(args, " "))
 }
 
 func IsExecAny(mode os.FileMode) bool {
 	return mode&0111 != 0
 }
 
-func typeCmd(command_map map[string]shell_func, args []string) {
+func typeCmd(command_map map[string]shell_func, rest_of_input string) {
+	args, _ := tokenizeArgumentString(rest_of_input)
 	cmd := args[0]
 
 	if _, exists := command_map[cmd]; exists {
@@ -47,8 +68,9 @@ func typeCmd(command_map map[string]shell_func, args []string) {
 	}
 }
 
-func execCommand(cmd string, cmd_args []string) {
+func execCommand(cmd string, rest_of_input string) {
 
+	cmd_args, _ := tokenizeArgumentString(rest_of_input)
 	filepath, err := exec.LookPath(cmd)
 
 	if err != nil {
@@ -66,7 +88,7 @@ func execCommand(cmd string, cmd_args []string) {
 	}
 }
 
-func pwdCmd(_ map[string]shell_func, cmd_args []string) {
+func pwdCmd(_ map[string]shell_func, rest_of_input string) {
 	dir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -74,8 +96,9 @@ func pwdCmd(_ map[string]shell_func, cmd_args []string) {
 	fmt.Println(dir)
 }
 
-func cdCmd(_ map[string]shell_func, cmd_args []string) {
+func cdCmd(_ map[string]shell_func, rest_of_input string) {
 
+	cmd_args := strings.Fields(rest_of_input)
 	target_dir := cmd_args[0]
 
 	if target_dir[0] == '~' {
@@ -84,7 +107,7 @@ func cdCmd(_ map[string]shell_func, cmd_args []string) {
 
 	err := os.Chdir(target_dir)
 	if err != nil {
-		fmt.Printf("cd: %s: No such file or directory\n", cmd_args[0])
+		fmt.Printf("cd: %s: No such file or directory\n", target_dir)
 	}
 }
 
@@ -95,25 +118,22 @@ func handleInput(reader *bufio.Reader) {
 		"echo": echoCmd,
 		"type": typeCmd,
 		"pwd":  pwdCmd,
-		"cd": cdCmd,
+		"cd":   cdCmd,
 	}
 
 	input, err := reader.ReadString('\n')
-
-	input = strings.TrimSpace(input)
-
-	cmd_args := strings.Split(input, " ")
 
 	if err != nil {
 		panic(err)
 	}
 
-	cmd := strings.ToLower(cmd_args[0])
+	cmd, rest_of_input, _ := strings.Cut(input, " ")
+	cmd = strings.ToLower(strings.TrimSpace(cmd))
 
 	if matched_cmd, exists := commands[cmd]; exists {
-		matched_cmd(commands, cmd_args[1:])
+		matched_cmd(commands, rest_of_input)
 	} else {
-		execCommand(cmd, cmd_args[1:])
+		execCommand(cmd, rest_of_input)
 	}
 }
 
